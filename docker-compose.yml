@@ -1,0 +1,97 @@
+services:
+  db:
+    platform: linux/x86_64
+    container_name: todorestful_mysql
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    expose:
+      - "3306"
+    networks:
+      - my_network
+    env_file:
+      - ./local.env
+    command: mysqld --bind-address=0.0.0.0 --default-authentication-plugin=mysql_native_password --sql_mode="NO_ENGINE_SUBSTITUTION"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db-dumps/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "host.docker.internal", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    extra_hosts:
+      - "kubernetes.docker.internal:host-gateway"
+
+  frontend:
+    platform: linux/x86_64
+    container_name: todorestful_frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    expose:
+      - "3000"
+    networks:
+      - my_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    env_file:
+      - ./local.env
+    command: sh -c "echo 'Starting frontend...'; npm run build; npm run dev"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    extra_hosts:
+      - "kubernetes.docker.internal:host-gateway"
+
+  backend:
+    platform: linux/x86_64
+    container_name: todorestful_backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    expose:
+      - "3001"
+      - "3306"
+    networks:
+      - my_network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - db
+    env_file:
+      - ./local.env
+    environment:
+      - PORT=3001
+    command: sh -c "echo 'Starting backend...';npm run test; npm run migrate; npm run dev"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    extra_hosts:
+      - "kubernetes.docker.internal:host-gateway"
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  my_network:
+    driver: bridge
