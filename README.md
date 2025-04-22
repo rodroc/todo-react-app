@@ -23,7 +23,3 @@ Load browser to:
 ```bash
 http://localhost:3000/
 ```
-## Demo
-
-Demo video is included.
-
