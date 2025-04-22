@@ -1,5 +1,5 @@
 
-# TODO-WEB-APP
+# TODO-REACT-APP
 
 Test project written in reactJS & nodeJS using Vite.
 
@@ -12,7 +12,7 @@ Docker Desktop
 To run project, open terminal & set to project path:
 
 ```bash
-  cd todo-app-restful
+  cd todo-react-app
   docker-compose up
 ```
 
